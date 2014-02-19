@@ -35,14 +35,13 @@ void semaphore_status( void ){
 	printf("Sem:\t");
 	for(i='a'; i<'z'; i++)	//Cicla para imprimir valores
 		printf("[%c] %+0d\t", i, semaphore_get( i )->value);
-	printf("\n");
 
 	for(i='a'; i<'z'; i++){	//Cicla para imprimir estados
 		t_semaphore* cache = semaphore_get( i );
 		if( list_size( cache->bloked) > 0 ){
 			printf("\nBlk [%c]: ", i);
 			list_iterate( cache->bloked, (void*)_program_get_name);
-			printf("\n\n");
 		}
 	}
+	printf("\n");
 }

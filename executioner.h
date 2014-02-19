@@ -7,10 +7,10 @@
 #include "program.h"
 
 
-void exec(t_program*);
-void rollback(t_program*);
+void exec(t_program*, int);
+void rollback(t_program*, int);
 bool anyActive(t_programBulk*);
-void evaluateR(t_programBulk*, int);
+void evaluateR(t_programBulk*, int, int);
 void evaluate(t_programBulk*);
 
 #endif
