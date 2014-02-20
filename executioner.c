@@ -4,12 +4,14 @@
 char bus[BUS_SIZE] = { 0 };
 int busPointer = 0;
 
-
-void _tab(int amount){
+#ifdef DEBUG
+static void _tab(int amount){
 	int i;
 	for(i=0; i<amount; i++)
 		printf("  ");
 }
+#endif
+
 
 t_program *exec(t_program* self, int step){
 #ifdef DEBUG
@@ -45,7 +47,7 @@ t_program *exec(t_program* self, int step){
 				list_add(semaphore_get( arg )->bloked, self);
 				self->state = INTERUPTED;
 					#ifdef DEBUG
-						printf("\tINTERRUPTED");
+						printf("\tINTERRUPT: %c", self->name);
 					#endif
 			}
 			break;
@@ -58,6 +60,12 @@ t_program *exec(t_program* self, int step){
 		self->pc++;
 	if(self->pc == self->size){
 		self->state = FINISHED;
+
+		if(self->loop != 0){	//Si tiene que loopear
+			if(self->loop != -1)
+				self->loop--;	//Desconta  si no es infinito
+			self->pc = 0;		//Volve a empezar (pero con estado de Finished)
+		}
 		#ifdef DEBUG
 			printf("\tFINISHED!");
 		#endif
@@ -71,6 +79,10 @@ t_program *exec(t_program* self, int step){
 
 void rollback(t_program* self, int step, t_program* lynch){
 	//Siempre que rollbackea esta activo, sino no podria haberlo ejecutado... no? :S
+
+	if(self->state == FINISHED)
+		self->pc = self->size;
+
 	self->pc--;
 	self->state = ACTIVE;
 
@@ -91,7 +103,7 @@ void rollback(t_program* self, int step, t_program* lynch){
 				list_add(semaphore_get( arg )->bloked, lynch);	//Creo que tendria que agregarlo al final, no al principio
 				lynch->state = INTERUPTED;
 					#ifdef DEBUG
-						printf("\tINTERRUPTED");
+				printf("\tINTERRUPT: %c", lynch->name);
 					#endif
 			}
 			break;
@@ -129,7 +141,7 @@ void evaluateR( t_programBulk* test, int who, int step ){
 
 	int i;
 	for(i=0; i<test->size; i++){
-		if(test->programs[i]->state == ACTIVE)
+		if(test->programs[i]->state == ACTIVE || ( test->programs[i]->state == FINISHED && test->programs[i]->loop != 0) )
 			evaluateR( test, i, step+1);
 	}
 

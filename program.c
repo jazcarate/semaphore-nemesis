@@ -10,11 +10,12 @@ const char* getActionName(t_action a){
 }
 
 
-t_program *program_create(char name, int size, ...){
+t_program *program_create(char name, int loopCount, int size, ...){
 	t_program *new = malloc( sizeof( t_program ) );
 				new->name		= name;
 				new->size		= size;
 				new->pc			= 0;
+				new->loop		= loopCount;
 				new->state		= ACTIVE;
 				new->operations	= malloc( size * sizeof( t_operation ) );
 

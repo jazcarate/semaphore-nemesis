@@ -1,26 +1,35 @@
 #include "executioner.h"
 
-//#define DEBUG Esta como directiva en compilacion -D
+//#define DEBUG //Esta como directiva en compilacion -D
 
 int main(int argc, char **argv) {
 	semaphores_init();
 	semaphore_set('a', 1);
-	semaphore_set('b', 0);
-	semaphore_set('c', 1);	//Mi mutex
+	semaphore_set('b', 1);
+	semaphore_set('c', 0);
+	semaphore_set('d', 0);
 
-	t_programBulk* testCase = programBulk_create(2,
-								program_create('1', 5,	(t_operation){ WAIT,	'a'},
-														(t_operation){ WAIT,	'c'},
-														(t_operation){ PRINT,	'Y'},
-														(t_operation){ SIGNAL,	'c'},
-														(t_operation){ SIGNAL,	'b'}
-											),
-								program_create('2', 5,	(t_operation){ WAIT,	'b'},
-														(t_operation){ WAIT,	'c'},
-														(t_operation){ PRINT,	't'},
-														(t_operation){ SIGNAL,	'c'},
-														(t_operation){ SIGNAL,	'a'}
-											)
+
+	t_programBulk* testCase = programBulk_create(3,
+								program_create('A', -1, 3,
+										(t_operation){ WAIT,	'a'},
+										(t_operation){ PRINT,	'A'},
+										(t_operation){ SIGNAL,	'd'}
+								),
+								program_create('B', -1, 5,
+										(t_operation){ WAIT,	'b'},
+										(t_operation){ WAIT,	'd'},
+										(t_operation){ PRINT,	'B'},
+										(t_operation){ SIGNAL,	'c'},
+										(t_operation){ SIGNAL,	'a'}
+								),
+								program_create('C', -1, 5,
+										(t_operation){ WAIT,	'c'},
+										(t_operation){ WAIT,	'd'},
+										(t_operation){ PRINT,	'C'},
+										(t_operation){ SIGNAL,	'b'},
+										(t_operation){ SIGNAL,	'a'}
+								)
 	);
 
 	 evaluate( testCase );
