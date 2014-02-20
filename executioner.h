@@ -7,8 +7,8 @@
 #include "program.h"
 
 
-void exec(t_program*, int);
-void rollback(t_program*, int);
+t_program *exec(t_program*, int);
+void rollback(t_program*, int, t_program*);
 bool anyActive(t_programBulk*);
 void evaluateR(t_programBulk*, int, int);
 void evaluate(t_programBulk*);
