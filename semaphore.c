@@ -25,23 +25,28 @@ void semaphores_destroy( void ){
 	for(i='a'; i<'z'; i++)
 		list_destroy( semaphore_get( i )->bloked);
 }
+#ifdef DEBUG
 void semaphore_status( void ){
+	char i;
+	int x=0;
 
 	void _program_get_name(t_program* x){
-		printf("%c -> ", x->name);
+		printf_status("%c -> ", x->name);
 	}
-
-	char i;
-	printf("Sem:\t");
-	for(i='a'; i<'z'; i++)	//Cicla para imprimir valores
-		printf("[%c] %+0d\t", i, semaphore_get( i )->value);
 
 	for(i='a'; i<'z'; i++){	//Cicla para imprimir estados
 		t_semaphore* cache = semaphore_get( i );
+			x += printf_coordinates(x, programMaxY, "%c:%d ", i, cache->value) + 1;
+
+		/*TODO imrpmir listas  de bloqueados
+	for(i='a'; i<'z'; i++){	//Cicla para imprimir estados
+		t_semaphore* cache = semaphore_get( i );
 		if( list_size( cache->bloked) > 0 ){
-			printf("\nBlk [%c]: ", i);
+			printf_status("Blk [%c]: ", i);
 			list_iterate( cache->bloked, (void*)_program_get_name);
 		}
+	}*/
+
 	}
-	printf("\n");
 }
+#endif

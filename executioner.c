@@ -4,20 +4,47 @@
 char bus[BUS_SIZE] = { 0 };
 int busPointer = 0;
 
+int programsSize = 0;
+
+void increment_pc(t_program *self, int amount){
 #ifdef DEBUG
-static void _tab(int amount){
-	int i;
-	for(i=0; i<amount; i++)
-		printf("  ");
+	printf_coordinates(self->positionX,
+						self->pc,
+						"  ");	//Borra el marcador de PC viejo
+#endif
+
+	self->pc += amount;
+
+	if(self->pc < 0)
+		self->pc = 0;
+
+	if(self->pc >= self->size){
+		self->state = FINISHED;
+
+		if(self->loop != LOOP_NO){	//Si tiene que loopear
+			if(self->loop != LOOP_INF)
+				self->loop--;	//Desconta  si no es infinito
+			self->pc = 0;		//Volve a empezar (pero con estado de Finished)
+		}
+	}
+		#ifdef DEBUG
+			printf_coordinates(self->positionX,
+								self->pc,
+								"->");	//Marca el PC actual
+		#endif
 }
-#endif
 
-
-t_program *exec(t_program* self, int step){
+t_program *exec(t_program* self){
 #ifdef DEBUG
-	_tab( step );
-	printf("  Do: %c[%d] -> %s %c", self->name, self->pc, getActionName(self->operations[self->pc].action), self->operations[self->pc].argument);
+	printf_status("  Do: %c[%d] -> %s %c", self->name, self->pc, getActionName(self->operations[self->pc].action), self->operations[self->pc].argument);
 #endif
+
+	if( self->state == INTERUPTED ){	//Con el auto
+		#ifdef DEBUG
+			printf_coordinates(0, 0, "%c is interupted. Can't exec", self->name);
+		#endif
+		return NULL;
+	}
 
 	t_program* ret = NULL;
 	char arg = self->operations[self->pc].argument;
@@ -34,7 +61,10 @@ t_program *exec(t_program* self, int step){
 				ret = (t_program*)list_remove(semaphore_get( arg )->bloked, 0);	//La onda es cuadno libero a uno, me lo acuerdo para lyncharlo caundo haces el rollback
 				ret->state = ACTIVE;	//No tengo cola de listos, porqque evaluo todas las posibilidades, si tengo el estado de listo
 				#ifdef DEBUG
-					printf("\tREADY UP: %c", ret->name);
+					printf_coordinates(ret->positionX,
+										ret->pc,
+										"R ");	//Levalta al otro
+					printf_status("EXEC) %c READY UP: %c", self->name, ret->name);
 				#endif
 			}
 			break;
@@ -47,48 +77,37 @@ t_program *exec(t_program* self, int step){
 				list_add(semaphore_get( arg )->bloked, self);
 				self->state = INTERUPTED;
 					#ifdef DEBUG
-						printf("\tINTERRUPT: %c", self->name);
+						printf_coordinates(self->positionX,
+											self->pc,
+											"%c)", arg);	//Se interumpio
+						printf_status("EXEC) WAIT INTERRUPT: %c", self->name);
 					#endif
 			}
 			break;
 		default:
 			break;
 	}
+	#ifdef DEBUG
+		semaphore_status();	//Actualiza los semaforos
+	#endif
 
 
 	//Siempre tiene que avanzar? 99% seugro que si
-		self->pc++;
-	if(self->pc == self->size){
-		self->state = FINISHED;
-
-		if(self->loop != LOOP_NO){	//Si tiene que loopear
-			if(self->loop != LOOP_INF)
-				self->loop--;	//Desconta  si no es infinito
-			self->pc = 0;		//Volve a empezar (pero con estado de Finished)
-		}
-		#ifdef DEBUG
-			printf("\tFINISHED!");
-		#endif
-	}
-
-#ifdef DEBUG
-	printf("\n");
-#endif
+	increment_pc(self, +1);
 	return ret;
 }
 
-void rollback(t_program* self, int step, t_program* lynch){
+void rollback(t_program* self, t_program* lynch){
 	//Siempre que rollbackea esta activo, sino no podria haberlo ejecutado... no? :S
 
 	if(self->state == FINISHED)	//Tendria que evaluar tambien que el loop sea o 0 o -1, pero si fuese un programa que esta en finished y no loopeaba, el PC no cambiaba, y ya queda al final por el exec
 		self->pc = self->size;
 
-	self->pc--;
+	increment_pc(self, -1);
 	self->state = ACTIVE;
 
 #ifdef DEBUG
-	_tab( step );
-	printf("UnDo: %c[%d]-> %s %c", self->name, self->pc, getActionName(self->operations[self->pc].action), self->operations[self->pc].argument);
+	printf_status("UnDo: %c[%d]-> %s %c", self->name, self->pc, getActionName(self->operations[self->pc].action), self->operations[self->pc].argument);
 #endif
 
 
@@ -103,7 +122,10 @@ void rollback(t_program* self, int step, t_program* lynch){
 				list_add(semaphore_get( arg )->bloked, lynch);	//Creo que tendria que agregarlo al final, no al principio
 				lynch->state = INTERUPTED;
 					#ifdef DEBUG
-				printf("\tINTERRUPT: %c", lynch->name);
+						printf_coordinates(lynch->positionX,
+											lynch->pc,
+											"%c)", arg);	//Levalta al otro
+						printf_status("ROLLBACK) %c INTERRUPTED: %c", self->name, lynch->name);
 					#endif
 			}
 			break;
@@ -113,7 +135,10 @@ void rollback(t_program* self, int step, t_program* lynch){
 				t_program* luckyYou = (t_program*)list_remove(semaphore_get( arg )->bloked, list_size( semaphore_get( arg )->bloked )-1 );	//Si t0do funciona bien, siempre tendrias que ser vos
 				luckyYou->state = ACTIVE;
 				#ifdef DEBUG
-					printf("\tREADY UP: %c", luckyYou->name);
+					printf_coordinates(luckyYou->positionX,
+										luckyYou->pc,
+										"R ");	//Levalta al otro
+					printf_status("ROLLBACK) %c READY UP: %c", self->name, luckyYou->name);
 				#endif
 			}
 			break;
@@ -121,7 +146,7 @@ void rollback(t_program* self, int step, t_program* lynch){
 			break;
 	}
 #ifdef DEBUG
-	printf("\n");
+	semaphore_status();	//Actualiza los semaforos
 #endif
 
 }
@@ -136,15 +161,19 @@ bool anyActive(t_programBulk* b){
 	return false;
 }
 
-void evaluateR( t_programBulk* test, int who, int step ){
-	t_program* aux=exec( test->programs[who], step );
+void evaluateR( t_programBulk* test, int who ){
+#ifdef DEBUG
+	getchar();
+#endif
+
+	t_program* aux=exec( test->programs[who]);
 
 	bool anyActive = false;
 	int i;
 	for(i=0; i<test->size; i++){
 		if(test->programs[i]->state == ACTIVE){
 			anyActive = true;
-			evaluateR( test, i, step+1);
+			evaluateR( test, i);
 		}
 	}
 
@@ -152,28 +181,33 @@ void evaluateR( t_programBulk* test, int who, int step ){
 	for(i=0; i<test->size; i++){
 		if(!anyActive && test->programs[i]->state == FINISHED && test->programs[i]->loop != LOOP_NO){
 			anyActive = true;
-			evaluateR( test, i, step+1);
+			evaluateR( test, i);
 		}
 	}
 
 	if( !anyActive ){	//Es una funciona aparte, y no un flag porque no podes inferir segun lo que pasa adentro de los evaluate recursivos
-		printf("Bus:\t%s\n", bus);
-		semaphore_status();
-		printf("\n\n");	//Prolijidad
+#ifdef DEBUG
+		printf_status("Bus:\t%s\n", bus);	//Imprimirlo en rojo
+#else
+		printf("Bus:\t%s\n", bus);	//Lo unico que hace si esta sin debug
+#endif
 	}
 
-	rollback( test->programs[who], step, aux); //Ni me impota si esta activo, porque si no estuviese, hubiese retornado lienas antes
+	rollback( test->programs[who], aux); //Ni me impota si esta activo, porque si no estuviese, hubiese retornado lienas antes
 }
 
-void evaluate( t_programBulk* test ){
-	printf("Estado inicial:\n");
+void evaluate( t_programBulk* test ){	system("clear");	//Nada de portabilida but w/e
+#ifdef DEBUG
+	console_init(test->size);
+	programBulk_print( test );
 	semaphore_status();
+#endif
 
-	printf("\nEvaluacion:\n");
 	int i;
 	for(i=0; i<test->size; i++)
-		evaluateR( test, i, 0 );
+		evaluateR( test, i );
 
-	printf("\nEstado final:\n");
+#ifdef DEBUG
 	semaphore_status();
+#endif
 }
