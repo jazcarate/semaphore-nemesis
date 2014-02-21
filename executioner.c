@@ -61,8 +61,8 @@ t_program *exec(t_program* self, int step){
 	if(self->pc == self->size){
 		self->state = FINISHED;
 
-		if(self->loop != 0){	//Si tiene que loopear
-			if(self->loop != -1)
+		if(self->loop != LOOP_NO){	//Si tiene que loopear
+			if(self->loop != LOOP_INF)
 				self->loop--;	//Desconta  si no es infinito
 			self->pc = 0;		//Volve a empezar (pero con estado de Finished)
 		}
@@ -80,7 +80,7 @@ t_program *exec(t_program* self, int step){
 void rollback(t_program* self, int step, t_program* lynch){
 	//Siempre que rollbackea esta activo, sino no podria haberlo ejecutado... no? :S
 
-	if(self->state == FINISHED)
+	if(self->state == FINISHED)	//Tendria que evaluar tambien que el loop sea o 0 o -1, pero si fuese un programa que esta en finished y no loopeaba, el PC no cambiaba, y ya queda al final por el exec
 		self->pc = self->size;
 
 	self->pc--;
@@ -139,13 +139,24 @@ bool anyActive(t_programBulk* b){
 void evaluateR( t_programBulk* test, int who, int step ){
 	t_program* aux=exec( test->programs[who], step );
 
+	bool anyActive = false;
 	int i;
 	for(i=0; i<test->size; i++){
-		if(test->programs[i]->state == ACTIVE || ( test->programs[i]->state == FINISHED && test->programs[i]->loop != 0) )
+		if(test->programs[i]->state == ACTIVE){
+			anyActive = true;
 			evaluateR( test, i, step+1);
+		}
 	}
 
-	if( !anyActive( test ) ){	//Es una funciona aparte, y no un flag porque no podes inferir segun lo que pasa adentro de los evaluate recursivos
+	//FIXME: Esto esta "mal", porque el CPU ejecuta como queire, pero intentamos hacer en shecudler que le de "prioridad" a los que no esten terminados
+	for(i=0; i<test->size; i++){
+		if(!anyActive && test->programs[i]->state == FINISHED && test->programs[i]->loop != LOOP_NO){
+			anyActive = true;
+			evaluateR( test, i, step+1);
+		}
+	}
+
+	if( !anyActive ){	//Es una funciona aparte, y no un flag porque no podes inferir segun lo que pasa adentro de los evaluate recursivos
 		printf("Bus:\t%s\n", bus);
 		semaphore_status();
 		printf("\n\n");	//Prolijidad

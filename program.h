@@ -21,6 +21,10 @@ typedef struct {
 	enum {ACTIVE, FINISHED, INTERUPTED} state;	//Y un estado
 } t_program;
 
+#define LOOP_NO 0
+#define LOOP_INF -1
+#define LOOP_N(A) A
+
 typedef struct {
 	int size;
 	t_program **programs;

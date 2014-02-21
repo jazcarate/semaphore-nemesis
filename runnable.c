@@ -11,19 +11,19 @@ int main(int argc, char **argv) {
 
 
 	t_programBulk* testCase = programBulk_create(3,
-								program_create('A', -1, 3,
+								program_create('A', 2, 3,
 										(t_operation){ WAIT,	'a'},
 										(t_operation){ PRINT,	'A'},
 										(t_operation){ SIGNAL,	'd'}
 								),
-								program_create('B', -1, 5,
+								program_create('B', 0, 5,
 										(t_operation){ WAIT,	'b'},
 										(t_operation){ WAIT,	'd'},
 										(t_operation){ PRINT,	'B'},
 										(t_operation){ SIGNAL,	'c'},
 										(t_operation){ SIGNAL,	'a'}
 								),
-								program_create('C', -1, 5,
+								program_create('C', 0, 5,
 										(t_operation){ WAIT,	'c'},
 										(t_operation){ WAIT,	'd'},
 										(t_operation){ PRINT,	'C'},
